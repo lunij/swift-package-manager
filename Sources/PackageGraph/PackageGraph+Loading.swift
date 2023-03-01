@@ -104,33 +104,28 @@ extension PackageGraph {
             )
 
             let manifest = node.manifest
-            // Derive the path to the package.
-            //
-            // FIXME: Lift this out of the manifest.
             let packagePath = manifest.path.parentDirectory
-            nodeObservabilityScope.trap {
-                // Create a package from the manifest and sources.
-                let builder = PackageBuilder(
-                    identity: node.identity,
-                    manifest: manifest,
-                    productFilter: node.productFilter,
-                    path: packagePath,
-                    additionalFileRules: additionalFileRules,
-                    binaryArtifacts: binaryArtifacts[node.identity] ?? [:],                
-                    shouldCreateMultipleTestProducts: shouldCreateMultipleTestProducts,
-                    createREPLProduct: manifest.packageKind.isRoot ? createREPLProduct : false,
-                    fileSystem: node.fileSystem,
-                    observabilityScope: nodeObservabilityScope
-                )
-                let package = try builder.construct()
-                manifestToPackage[manifest] = package
+            // Create a package from the manifest and sources.
+            let builder = PackageBuilder(
+                identity: node.identity,
+                manifest: manifest,
+                productFilter: node.productFilter,
+                path: packagePath,
+                additionalFileRules: additionalFileRules,
+                binaryArtifacts: binaryArtifacts[node.identity] ?? [:],
+                shouldCreateMultipleTestProducts: shouldCreateMultipleTestProducts,
+                createREPLProduct: manifest.packageKind.isRoot ? createREPLProduct : false,
+                fileSystem: node.fileSystem,
+                observabilityScope: nodeObservabilityScope
+            )
+            let package = try builder.construct()
+            manifestToPackage[manifest] = package
 
-                // Throw if any of the non-root package is empty.
-                if package.targets.isEmpty // System packages have targets in the package but not the manifest.
-                    && package.manifest.targets.isEmpty // An unneeded dependency will not have loaded anything from the manifest.
-                    && !manifest.packageKind.isRoot {
-                    throw PackageGraphError.noModules(package)
-                }
+            // Throw if any of the non-root package is empty.
+            if package.targets.isEmpty // System packages have targets in the package but not the manifest.
+                && package.manifest.targets.isEmpty // An unneeded dependency will not have loaded anything from the manifest.
+                && !manifest.packageKind.isRoot {
+                throw PackageGraphError.noModules(package)
             }
         }
 
